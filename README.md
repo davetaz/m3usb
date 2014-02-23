@@ -2,6 +2,8 @@
 
 Having problems managing music on usb devices using iTunes, this is your answer!
 
+WARNING: This script will delete any files on the USB key that are not in the playlist. BE CAREFUL! 
+
 ## Key features
 * Take iTunes playlist and sync it to a USB key
 * Take any organised m3u playlist and sync it to USB key
