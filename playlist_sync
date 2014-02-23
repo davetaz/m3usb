@@ -17,7 +17,7 @@ if (!$argv[1]) {
 $playlist = $argv[1];
 if ($argv[2] == "-c") {
 	$convert_bitrate = $argv[3];
-	if (!is_sumeric($convert_bitrate)) {
+	if (!is_numeric($convert_bitrate)) {
 		error("Invalid conversion bitrate specificied, try -h");
 	}
 }
@@ -56,35 +56,89 @@ echo "\nGot library path of $library_path\n";
 $memory_key = getMemoryKey() . "/";
 echo "\nDestination $memory_key\n";
 
-for ($i=0;$i<count($tracks);$i++) {
-	$input_path = $tracks[$i];
-	$output_path = str_replace($library_path,$memory_key,$input_path);
-	
-	if (substr($input_path,-4) != ".mp3" && substr($input_path,-4) != ".m4a") {
-		conintue;
-	}
-	
-	if (substr($output_path,-4) == ".m4a") {
-		$output_path = substr($output_path,0,-4) . ".mp3";
-	}
-	
-	if (file_exists($output_path) && filesize($output_path) > 0) {
-		continue;
-	}
+echo "Removing old files\n";
+removeOldFiles($tracks,$memory_key,$library_path);
+RemoveEmptySubFolders($memory_key);
+echo "Syncing Playlist\n";
+syncPlaylist($tracks,$memory_key,$library_path);
 
-	makeDirectoryStructure($memory_key,$output_path);
-	if (is_numeric($convert_bitrate) {
-		$bitrate = getBitRate($input_path);
-		if ($bitrate > ($convert_bitrate + 32)) {
-			echo "Converting $input_path\n";
-			convertAndCopy($input_path, $output_path);
+function removeOldFiles($tracks,$memory_key,$library_path) {
+	for ($i=0;$i<count($tracks);$i++) {
+		$input_path = $tracks[$i];
+		$output_path = str_replace($library_path,$memory_key,$input_path);
+
+		if (substr($input_path,-4) != ".mp3" && substr($input_path,-4) != ".m4a") {
+			continue;
+		}
+
+		if (substr($output_path,-4) == ".m4a") {
+			$output_path = substr($output_path,0,-4) . ".mp3";
+		}
+
+		$sync_files[$output_path] = true;
+	}
+	recurseRemove($memory_key,$sync_files);
+}
+
+function recurseRemove($main, $sync_files) {
+    $dirHandle = opendir($main);
+    while($file = readdir($dirHandle)){
+        if(is_dir($main.$file."/") && $file != '.' && $file != '..'){
+	    recurseRemove($main.$file."/",$sync_files);
+        } else {
+	    if (!is_dir($main.$file."/") && substr($file,0,1) != '.') {
+	    	$search = $main . $file;
+	    	if (!$sync_files[$search]) {
+	    		unlink($search);
+            	}
+	    }
+        }
+    }
+    closedir($dirHandle);
+}
+
+function RemoveEmptySubFolders($path)
+{
+  $empty=true;
+  foreach (glob($path.DIRECTORY_SEPARATOR."*") as $file)
+  {
+     $empty &= is_dir($file) && RemoveEmptySubFolders($file);
+  }
+  return $empty && rmdir($path);
+}
+
+function syncPlaylist($tracks,$memory_key,$library_path) {
+	global $convert_bitrate;
+	for ($i=0;$i<count($tracks);$i++) {
+		$input_path = $tracks[$i];
+		$output_path = str_replace($library_path,$memory_key,$input_path);
+
+		if (substr($input_path,-4) != ".mp3" && substr($input_path,-4) != ".m4a") {
+			continue;
+		}
+
+		if (substr($output_path,-4) == ".m4a") {
+			$output_path = substr($output_path,0,-4) . ".mp3";
+		}
+
+		if (file_exists($output_path) && filesize($output_path) > 0) {
+			continue;
+		}
+	
+		makeDirectoryStructure($memory_key,$output_path);
+		if (is_numeric($convert_bitrate)) {
+			$bitrate = getBitRate($input_path);
+			if ($bitrate > ($convert_bitrate + 32)) {
+				echo "Converting $input_path\n";
+				convertAndCopy($input_path, $output_path);
+			} else {
+				echo "Copying $input_path\n";
+				@copy($input_path,$output_path);
+			}
 		} else {
 			echo "Copying $input_path\n";
 			@copy($input_path,$output_path);
 		}
-	} else {
-		echo "Copying $input_path\n";
-		@copy($input_path,$output_path);
 	}
 }
 
