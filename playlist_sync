@@ -56,9 +56,18 @@ echo "\nGot library path of $library_path\n";
 $memory_key = getMemoryKey() . "/";
 echo "\nDestination $memory_key\n";
 
-echo "Removing old files\n";
-removeOldFiles($tracks,$memory_key,$library_path);
-RemoveEmptySubFolders($memory_key);
+$response = "";
+while ($response != "y" && $response != "n") {
+	echo "\nDo you want to auto-remove files in $memory_key that are not in the playlist? y/n \n";
+	$handle = fopen ("php://stdin","r");
+	$response = trim(fgets($handle));
+	fclose($handle);
+}
+if($response == "y"){
+	echo "Removing old files\n";
+	removeOldFiles($tracks,$memory_key,$library_path);
+	RemoveEmptySubFolders($memory_key);
+}
 echo "Syncing Playlist\n";
 syncPlaylist($tracks,$memory_key,$library_path);
 
